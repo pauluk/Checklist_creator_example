@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOP Checklist Creator</title>
+    <style>
+        /* --- Font Import: Roboto --- */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+        :root { /* NHS Colours */
+            --nhs-blue: #005EB8; --nhs-dark-blue: #003087; --nhs-bright-blue: #0072CE;
+            --nhs-light-grey: #F0F4F5; --nhs-mid-grey: #E8EDEE; --nhs-dark-grey: #425563;
+            --nhs-text: #212B32; --nhs-green: #007F3B; --nhs-white: #FFFFFF; --nhs-red: #DA291C;
+        }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--nhs-light-grey); color: var(--nhs-text); margin: 0; padding: 2rem; line-height: 1.6; }
+        :focus-visible { outline: 3px solid var(--nhs-blue); outline-offset: 2px; border-radius: 2px; }
+        .svg-defs { width: 0; height: 0; position: absolute; }
+        .creator-container { max-width: 900px; margin: auto; }
+        header { padding: 1.5rem 2rem; background-color: var(--nhs-dark-blue); color: var(--nhs-white); border-radius: 12px; margin-bottom: 2rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
+        header h1 { margin: 0; font-weight: 700; }
+        .card { background-color: var(--nhs-white); border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; font-size: 1.25rem; font-weight: 700; color: var(--nhs-dark-blue); border-bottom: 1px solid var(--nhs-mid-grey); }
+        .card-header[data-collapsible="true"] { cursor: pointer; }
+        .card-header[data-collapsible="true"]::-webkit-details-marker { display: none; }
+        .card-body { padding: 1.5rem; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem 1.5rem; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-weight: 600; color: var(--nhs-dark-grey); margin-bottom: 0.5rem; }
+        .form-group input, .form-group textarea, .llm-textarea { width: 100%; padding: 0.75rem; border: 2px solid var(--nhs-mid-grey); border-radius: 8px; font-family: 'Roboto', sans-serif; font-size: 1rem; box-sizing: border-box; transition: border-color 0.2s; }
+        .form-group input:focus, .form-group textarea:focus, .llm-textarea:focus { border-color: var(--nhs-blue); outline: none; }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        #stage-list { padding-bottom: 1px; }
+        .stage-container { border: 2px solid var(--nhs-blue); border-radius: 12px; margin-bottom: 1.5rem; background-color: #f8fafd; }
+        .stage-header { display: flex; gap: 0.5rem; align-items: center; padding: 1rem 1.5rem; background-color: var(--nhs-white); border-bottom: 2px solid var(--nhs-blue); border-radius: 12px 12px 0 0; }
+        .stage-header-main { flex-grow: 1; display: flex; align-items: center; gap: 0.5rem; cursor: grab; }
+        .stage-header-main input { flex-grow: 1; padding: 0.75rem; border: 2px solid var(--nhs-mid-grey); border-radius: 8px; font-family: 'Roboto', sans-serif; font-size: 1.1rem; font-weight: 600; }
+        .stage-header-main input:focus { border-color: var(--nhs-blue); outline: none; }
+        .task-list { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; min-height: 30px; }
+        .stage-content { display: block; transition: all 0.3s ease-out; }
+        .stage-container.collapsed .stage-content { display: none; }
+        .stage-container.collapsed .btn-toggle-stage-collapse svg { transform: rotate(0deg); }
+        .stage-container:not(.collapsed) .btn-toggle-stage-collapse svg { transform: rotate(90deg); }
+        .task-container { display: flex; flex-direction: column; gap: 1rem; border: 1px dashed var(--nhs-mid-grey); background-color: var(--nhs-white); padding: 1rem; border-radius: 8px; }
+        .task-main { display: flex; gap: 0.5rem; align-items: flex-start; cursor: grab; }
+        .task-inputs { flex-grow: 1; display: flex; flex-direction: column; gap: 0.75rem; }
+        .task-inputs input, .task-inputs textarea { width: 100%; padding: 0.75rem; border: 2px solid var(--nhs-mid-grey); border-radius: 8px; font-family: 'Roboto', sans-serif; font-size: 1rem; box-sizing: border-box; }
+        .task-inputs textarea { font-size: 0.9rem; min-height: 60px; resize: vertical; }
+        .task-link-section { border-top: 1px dashed var(--nhs-mid-grey); padding-top: 1rem; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .task-link-inputs { display: grid; grid-template-columns: 1fr auto; gap: 0.75rem 1rem; align-items: end; }
+        .task-link-inputs .form-group { margin-bottom: 0; }
+        .task-link-inputs label { font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .is-image-group { display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.75rem; }
+        .is-image-group input[type="checkbox"] { width: auto; }
+        .task-link-section.hidden { display: none; }
+        .btn-toggle-link { background: none; border: none; color: var(--nhs-blue); cursor: pointer; font-size: 0.9rem; font-weight: 600; padding: 0.25rem 0.5rem; border-radius: 4px; display: flex; align-items: center; gap: 0.25rem; margin-top: 0.5rem; align-self: flex-start; }
+        .btn-toggle-link:hover { background-color: var(--nhs-mid-grey); }
+        .btn-toggle-link svg { width: 16px; height: 16px; }
+        .dragging { opacity: 0.5; border: 2px dashed var(--nhs-blue); }
+        .drag-over { background-color: #e0f0ff !important; border-style: dashed !important; }
+        .stage-drag-over { border: 2px dashed var(--nhs-dark-blue); background-color: #d0e8ff; }
+        .llm-section { display: flex; flex-direction: column; gap: 1.5rem; }
+        .llm-step { display: flex; flex-direction: column; gap: 0.75rem; }
+        .llm-step h3 { margin: 0; color: var(--nhs-dark-blue); }
+        .llm-step label { font-weight: 600; color: var(--nhs-dark-grey); }
+        .llm-textarea { font-family: monospace; font-size: 0.9rem; background-color: #f8fafd; color: var(--nhs-text); }
+        .llm-textarea[readonly] { background-color: var(--nhs-mid-grey); }
+        hr { border: none; height: 1px; background-color: var(--nhs-mid-grey); margin: 0.5rem 0; }
+        #llm-error-container { display: none; padding: 1rem; background-color: #fff0f0; border: 2px solid var(--nhs-red); border-radius: 8px; display: flex; flex-direction: column; gap: 0.75rem; }
+        #llm-error-container h3 { margin: 0; color: var(--nhs-red); }
+        #llm-error-debug-prompt { background-color: var(--nhs-white); }
+        .btn { display: inline-flex; align-items: center; gap: 0.5rem; border: none; padding: 0.75rem 1.25rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        .btn-primary { background-color: var(--nhs-green); color: var(--nhs-white); }
+        .btn-primary:hover { background-color: #00632f; }
+        .btn-secondary { background-color: var(--nhs-blue); color: var(--nhs-white); }
+        .btn-secondary:hover { background-color: var(--nhs-dark-blue); }
+        .btn-danger { background-color: var(--nhs-mid-grey); color: var(--nhs-dark-grey); }
+        .btn-danger:hover { background-color: var(--nhs-red); color: var(--nhs-white); }
+        .btn-icon { padding: 0.5rem; background-color: transparent; }
+        .btn-icon svg { width: 20px; height: 20px; }
+        .btn-add-task { background-color: var(--nhs-bright-blue); color: var(--nhs-white); font-size: 0.9rem; padding: 0.5rem 1rem; margin-top: 0.5rem; }
+        .btn-add-task:hover { background-color: var(--nhs-blue); }
+        .controls-container { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; }
+        .import-group, .export-group { display: flex; flex-wrap: wrap; gap: 1rem; }
+        .import-group .btn, .export-group .btn { background-color: var(--nhs-dark-grey); color: var(--nhs-white); }
+        .import-group .btn:hover, .export-group .btn:hover { background-color: var(--nhs-text); }
+        #json-import-input { display: none; }
+        .download-json-container { padding: 1.5rem; text-align: center; margin-top: 1rem; border-top: 1px solid var(--nhs-mid-grey);}
+        #download-json-btn-bottom { background-color: var(--nhs-dark-grey); color: var(--nhs-white); }
+        #download-json-btn-bottom:hover { background-color: var(--nhs-text); }
+        .chevron-icon { width: 20px; height: 20px; margin-left: auto; transition: transform 0.2s ease-in-out; color: var(--nhs-bright-blue); flex-shrink: 0;}
+        details[open] > summary .chevron-icon { transform: rotate(90deg); }
+        
+        /* Accessibility Arrow Buttons */
+        .a11y-controls { display: flex; flex-direction: column; gap: 0.5rem; margin-right: 0.5rem; }
+        .btn-move { background: none; border: 1px solid var(--nhs-bright-blue); color: var(--nhs-bright-blue); padding: 0.25rem; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .btn-move:hover { background-color: var(--nhs-mid-grey); }
+        .btn-move svg { width: 16px; height: 16px; }
+        .btn-move:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--nhs-mid-grey); color: var(--nhs-mid-grey);}
+        
+        /* Creator Collapse Buttons */
+        .btn-toggle-stage-collapse {
+            background: none; border: none; color: var(--nhs-bright-blue); cursor: pointer; padding: 0.25rem;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-toggle-stage-collapse:hover { background-color: var(--nhs-mid-grey); }
+        .btn-toggle-stage-collapse svg { width: 20px; height: 20px; transition: transform 0.2s ease-in-out; }
+        .stage-content { display: block; transition: all 0.3s ease-out; }
+        .stage-container.collapsed .stage-content { display: none; }
+        .stage-container.collapsed .btn-toggle-stage-collapse svg { transform: rotate(0deg); }
+        .stage-container:not(.collapsed) .btn-toggle-stage-collapse svg { transform: rotate(90deg); }
+
+        /* How to Use Modal */
+        #how-to-use-btn { background-color: var(--nhs-white); color: var(--nhs-dark-blue); font-size: 0.9rem; padding: 0.5rem 1rem; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s linear 0.3s; z-index: 1000;
+        }
+        .modal-overlay.visible { opacity: 1; visibility: visible; transition-delay: 0s; }
+        .modal-content {
+            position: relative; max-width: 90%; max-height: 90vh; background: var(--nhs-white);
+            padding: 1.5rem; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column;
+            overflow-y: auto; max-width: 800px;
+        }
+        .modal-content img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
+        .modal-text { margin-top: 1.5rem; }
+        .modal-text h3 { color: var(--nhs-dark-blue); margin-top: 0; }
+        .modal-text p { margin-bottom: 0.5rem; }
+        .modal-close {
+            position: absolute; top: 10px; right: 10px; background: white; border: none; font-size: 2rem;
+            line-height: 1; padding: 0 0.5rem; cursor: pointer; color: black; border-radius: 50%;
+            width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;
+        }
+        /* Video Wrapper for Modal */
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 8px; /* Match image style */
+            margin-top: 1rem;
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <svg class="svg-defs"> <defs> <svg id="icon-add" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg> <svg id="icon-trash" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg> <svg id="icon-download" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 9.293a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg> <svg id="icon-upload" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" transform="rotate(180 10 10)" /></svg> <svg id="icon-example" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1V3a1 1 0 112 0v1h2V3a1 1 0 112 0v1h1a1 1 0 011 1v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-2v1a1 1 0 11-2 0v-1H6v1a1 1 0 11-2 0v-1H3a1 1 0 01-1-1V6a1 1 0 011-1h1V4a1 1 0 011-1zm1 4v2h2V6H6zm4 0v2h2V6h-2zm-4 4v2h2v-2H6zm4 0v2h2v-2h-2z" clip-rule="evenodd" /></svg> <svg id="icon-chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg> <svg id="icon-copy" viewBox="0 0 20 20" fill="currentColor"><path d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H7zM3 5a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V5z" /></svg> <svg id="icon-csv" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 1a1 1 0 000 2h8a1 1 0 100-2H6zM6 9a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 4a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" /></svg> <svg id="icon-link" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" /></svg>
+        <svg id="icon-eye" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" /></svg>
+        <svg id="icon-arrow-up" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 11.414V14a1 1 0 102 0v-2.586l.293.293a1 1 0 001.414-1.414l-3-3z" clip-rule="evenodd" /></svg>
+        <svg id="icon-arrow-down" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-4.293a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 17.414V14a1 1 0 102 0v3.414l.293-.293a1 1 0 00-1.414-1.414l-3 3z" clip-rule="evenodd" transform="rotate(180 10 10)" /></svg>
+        <svg id="icon-help" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-1 1v1a1 1 0 102 0V8a1 1 0 00-1-1zm0 4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" /></svg>
+     </defs> </svg>
+
+    <div class="creator-container">
+        <header>
+            <div><h1>SOP Checklist Creator</h1></div>
+            <button class="btn" id="how-to-use-btn">
+                <svg width="20" height="20"><use href="#icon-help" /></svg>
+                How to Use
+            </button>
+        </header>
+
+        <details class="card" open>
+            <summary class="card-header" data-collapsible="true"> <span>SOP Metadata</span> <svg class="chevron-icon" width="20" height="20"><use href="#icon-chevron" /></svg> </summary>
+            <div class="card-body"> <form id="metadata-form"> <div class="form-grid"> <div class="form-group"> <label for="doc-title">Title</label> <input type="text" id="doc-title" placeholder="e.g., TM 0001 Receipting SOP..." required> </div> <div class="form-group"> <label for="doc-team">Team</label> <input type="text" id="doc-team" placeholder="e.g., Treasury Management" required> </div> <div class="form-group"> <label for="doc-workstream">Workstream Service</label> <input type="text" id="doc-workstream" placeholder="e.g., Learning Support Fund (LSF)"> </div> <div class="form-group"> <label for="doc-review">Last Reviewed</label> <input type="date" id="doc-review"> </div> <div class="form-group"> <label for="doc-version">Version</label> <input type="text" id="doc-version" value="1.0"> </div> </div> <div class="form-group" style="margin-top: 1rem;"> <label for="doc-description">Description</label> <textarea id="doc-description" placeholder="A brief description of the process..."></textarea> </div> </form> </div>
+        </details>
+
+        <details class="card" open>
+            <summary class="card-header" data-collapsible="true">
+                <span>Checklist Builder (Manual)</span>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <button class="btn" id="toggle-all-stages-btn" style="font-size: 0.9rem; padding: 0.5rem 1rem; background-color: var(--nhs-mid-grey); color: var(--nhs-dark-grey);">Expand All</button>
+                    <svg class="chevron-icon" width="20" height="20" style="transform: rotate(90deg);"><use href="#icon-chevron" /></svg>
+                </div>
+            </summary>
+            <div class="card-body" id="stage-list"> </div>
+            <div class="card-body" style="padding-top: 0;"> <button class="btn btn-secondary" id="add-stage-btn"> <svg width="20" height="20"><use href="#icon-add" /></svg> Add Stage </button> </div>
+        </details>
+
+        <div class="card">
+            <div class="card-header"> <span>Controls & Actions</span> </div>
+            <div class="card-body controls-container">
+                <div class="import-group">
+                     <button class="btn btn-danger" id="clear-form-btn"> <svg width="20" height="20"><use href="#icon-trash" /></svg> Clear Form & Autosave </button>
+                     <button class="btn" id="load-example-btn"> <svg width="20" height="20"><use href="#icon-example" /></svg> Load Example </button>
+                     <input type="file" id="json-import-input" accept=".json">
+                     <label for="json-import-input" class="btn"> <svg width="20" height="20"><use href="#icon-upload" /></svg> Import JSON </label>
+                </div>
+                 <div class="export-group">
+                     <button class="btn" id="generate-csv-btn"> <svg width="20" height="20"><use href="#icon-csv" /></svg> Download CSV </button>
+                     <button class="btn btn-primary" id="generate-btn"> <svg width="20" height="20"><use href="#icon-download" /></svg> Download HTML & JSON </button>
+                 </div>
+            </div>
+        </div>
+
+        <details class="card" id="llm-generator-section">
+            <summary class="card-header" data-collapsible="true"> <span>Import from Text (LLM Generator)</span> <svg class="chevron-icon" width="20" height="20"><use href="#icon-chevron" /></svg> </summary>
+            <div class="card-body llm-section">
+                <div class="llm-step"> <h3>Step 1: Generate & Copy Prompt</h3> <label for="llm-sop-text">Paste your raw SOP text here:</label> <textarea id="llm-sop-text" class="llm-textarea" rows="10" placeholder="Paste your full Standard Operating Procedure text here..."></textarea> <button id="llm-generate-prompt-btn" class="btn btn-secondary" style="align-self: flex-start;"> <svg width="20" height="20"><use href="#icon-copy" /></svg> Generate & Copy Prompt </button> <label for="llm-prompt-output">Your prompt (auto-copied to clipboard):</label> <textarea id="llm-prompt-output" class="llm-textarea" rows="15" readonly placeholder="Your full prompt for the LLM will appear here..."></textarea> </div>
+                <hr>
+                <div class="llm-step"> <h3>Step 2: Generate Checklist from LLM Response</h3> <label for="llm-json-input">Paste the LLM's JSON response here:</label> <textarea id="llm-json-input" class="llm-textarea" rows="15" placeholder="Paste the JSON output from your LLM here..."></textarea> <button id="llm-generate-btn" class="btn btn-primary" style="align-self: flex-start;"> <svg width="20" height="20"><use href="#icon-download" /></svg> Generate Checklist from JSON </button> <div id="llm-error-container"> <h3>JSON Parse Error</h3> <p>The JSON from the LLM is invalid. This often happens if the LLM includes text (like "Here is the JSON:") before or after the JSON block.</p> <label for="llm-error-debug-prompt">Copy the prompt below and paste it back to your LLM to ask it to fix the error:</label> <textarea id="llm-error-debug-prompt" class="llm-textarea" rows="10" readonly></textarea> <button id="llm-copy-debug-btn" class="btn btn-danger" style="align-self: flex-start;"> <svg width="20" height="20"><use href="#icon-copy" /></svg> Copy Debug Prompt </button> </div> </div>
+            </div>
+        </details>
+
+         <div class="download-json-container">
+             <button id="download-json-btn-bottom" class="btn">
+                 <svg width="20" height="20"><use href="#icon-download" /></svg>
+                 Download Form Data as JSON (Structure Only)
+             </button>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="how-to-use-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="how-to-use-close" aria-label="Close modal">&times;</button>
+            <img src="https://iili.io/KsdVm5g.png" alt="A diagram showing how to use the SOP Checklist Creator with an LLM.">
+            <div class="modal-text">
+                <h3>Using the LLM Generator</h3>
+                <p>This tool can save you time by converting a text-based SOP into a checklist automatically.</p>
+                <p>1. <strong>Paste your SOP:</strong> Copy your entire standard operating procedure text and paste it into the "Step 1" box.</p>
+                <p>2. <strong>Generate Prompt:</strong> Click "Generate & Copy Prompt". This copies a special instruction to your clipboard that tells an LLM (like Gemini, ChatGPT, etc.) exactly how to format the text.</p>
+                <p>3. <strong>Use LLM:</strong> Go to your preferred LLM and paste the prompt. It will generate a response that is *only* a JSON code block.</p>
+                <p>4. <strong>Paste JSON:</strong> Copy the entire JSON block from the LLM and paste it into the "Step 2" box.</p>
+                <p>5. <strong>Generate:</strong> Click "Generate Checklist from JSON". The app will instantly populate the forms above and download the new HTML and JSON files for you.</p>
+
+                <h3>Video Guide</h3>
+                <div class="video-wrapper">
+<a href="https://www.youtube.com/watch?v=sklPInQSh3c" target="_blank" class="button" rel="noopener noreferrer">
+  🎥 Watch Video
+</a>
+
+<style>
+.video-button {
+  display: inline-block;
+  background-color: #ff0000;
+  colour: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.video-button:hover {
+  background-color: #cc0000;
+}
+</style>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Element Refs ---
+            const form = document.getElementById('metadata-form');
+            const stageList = document.getElementById('stage-list');
+            const addStageBtn = document.getElementById('add-stage-btn');
+            const toggleAllStagesBtn = document.getElementById('toggle-all-stages-btn');
+            const generateBtn = document.getElementById('generate-btn');
+            const generateCsvBtn = document.getElementById('generate-csv-btn');
+            const loadExampleBtn = document.getElementById('load-example-btn');
+            const importInput = document.getElementById('json-import-input');
+            const reviewDateInput = document.getElementById('doc-review');
+            const clearFormBtn = document.getElementById('clear-form-btn');
+            const downloadJsonBtnBottom = document.getElementById('download-json-btn-bottom');
+
+            // --- LLM Section Refs ---
+            const llmSopText = document.getElementById('llm-sop-text');
+            const llmGeneratePromptBtn = document.getElementById('llm-generate-prompt-btn');
+            const llmPromptOutput = document.getElementById('llm-prompt-output');
+            const llmJsonInput = document.getElementById('llm-json-input');
+            const llmGenerateBtn = document.getElementById('llm-generate-btn');
+            const llmErrorContainer = document.getElementById('llm-error-container');
+            const llmErrorDebugPrompt = document.getElementById('llm-error-debug-prompt');
+            const llmCopyDebugBtn = document.getElementById('llm-copy-debug-btn');
+            
+            // --- Modal Refs ---
+            const howToUseBtn = document.getElementById('how-to-use-btn');
+            const howToUseModal = document.getElementById('how-to-use-modal');
+            const howToUseClose = document.getElementById('how-to-use-close');
+
+            // --- Autosave ---
+            const AUTOSAVE_KEY = 'sopCreatorAutosave_v9_a11y';
+            let autosaveTimeout;
+
+            // --- Drag & Drop State ---
+            let draggedItem = null;
+
+            // --- Set Today's Date ---
+            reviewDateInput.valueAsDate = new Date();
+
+            // --- Event Listeners ---
+            addStageBtn.addEventListener('click', () => { addStage(); triggerAutosave(); });
+            toggleAllStagesBtn.addEventListener('click', handleToggleAllStages);
+            generateBtn.addEventListener('click', handleGenerate);
+            generateCsvBtn.addEventListener('click', handleGenerateCSV);
+            loadExampleBtn.addEventListener('click', loadExampleData);
+            importInput.addEventListener('change', handleImport);
+            clearFormBtn.addEventListener('click', handleClearForm);
+            downloadJsonBtnBottom.addEventListener('click', handleDownloadFormDataJson);
+
+            // Modal Listeners
+            howToUseBtn.addEventListener('click', () => howToUseModal.classList.add('visible'));
+            howToUseClose.addEventListener('click', () => howToUseModal.classList.remove('visible'));
+            howToUseModal.addEventListener('click', (e) => {
+                if (e.target === howToUseModal) { // Close on overlay click
+                    howToUseModal.classList.remove('visible');
+                }
+            });
+
+            // LLM Listeners
+            llmGeneratePromptBtn.addEventListener('click', handleGeneratePrompt);
+            llmGenerateBtn.addEventListener('click', handleLLMGenerate);
+            llmCopyDebugBtn.addEventListener('click', copyLLMDebugPrompt);
+
+            // Event delegation for dynamic buttons & autosave triggers
+            stageList.addEventListener('click', (e) => {
+                const targetButton = e.target.closest('button');
+                if (!targetButton) return; // Exit if not a button
+
+                if (targetButton.classList.contains('btn-add-task')) {
+                    const stage = targetButton.closest('.stage-container');
+                    const taskList = stage.querySelector('.task-list');
+                    addTask(taskList);
+                    updateMoveButtons(taskList, '.task-container');
+                    triggerAutosave();
+                } else if (targetButton.classList.contains('btn-remove-stage')) {
+                    const stageContainer = targetButton.closest('.stage-container');
+                    if (confirm(`Are you sure you want to delete the stage "${stageContainer.querySelector('.stage-title-input').value || 'Untitled Stage'}"?`)) {
+                        stageContainer.remove();
+                        updateMoveButtons(stageList, '.stage-container');
+                        triggerAutosave();
+                    }
+                } else if (targetButton.classList.contains('btn-remove-task')) {
+                     const taskContainer = targetButton.closest('.task-container');
+                     if (confirm(`Are you sure you want to delete the task "${taskContainer.querySelector('.task-description-input').value || 'Untitled Task'}"?`)) {
+                        const taskList = taskContainer.parentElement;
+                        taskContainer.remove();
+                        updateMoveButtons(taskList, '.task-container');
+                        triggerAutosave();
+                    }
+                } else if (targetButton.classList.contains('btn-toggle-link')) {
+                    toggleLinkSection(targetButton);
+                } else if (targetButton.classList.contains('btn-move-up')) {
+                    moveItemUp(targetButton);
+                    triggerAutosave();
+                } else if (targetButton.classList.contains('btn-move-down')) {
+                    moveItemDown(targetButton);
+                    triggerAutosave();
+                } else if (targetButton.classList.contains('btn-toggle-stage-collapse')) {
+                    toggleStageCollapse(targetButton.closest('.stage-container'));
+                }
+            });
+
+            // Autosave listener for form inputs
+             form.addEventListener('input', triggerAutosave);
+             stageList.addEventListener('input', triggerAutosave); // For stage/task inputs
+
+            // Drag & Drop Listeners (delegated)
+            stageList.addEventListener('dragstart', handleDragStart);
+            stageList.addEventListener('dragend', handleDragEnd);
+            stageList.addEventListener('dragover', handleDragOver);
+            stageList.addEventListener('drop', handleDrop);
+
+            // Collapsible card headers
+            document.querySelectorAll('.card-header[data-collapsible="true"]').forEach(header => {
+                header.addEventListener('click', (e) => {
+                    const details = e.target.closest('details');
+                    if(details && e.target.closest('summary') === e.currentTarget) {
+                        const icon = e.currentTarget.querySelector('.chevron-icon');
+                        if (icon) {
+                            if (!details.open) { icon.style.transform = 'rotate(90deg)'; } 
+                            else { icon.style.transform = ''; }
+                        }
+                    }
+                });
+            });
+
+            // --- Load Autosave on Init ---
+            loadCreatorState();
+
+            // --- Core Functions ---
+
+            function addStage(title = '') {
+                const stageId = `stage-${Date.now()}`;
+                const stageEl = document.createElement('div');
+                stageEl.className = 'stage-container'; // Default to expanded
+                stageEl.dataset.id = stageId;
+                
+                stageEl.innerHTML = `
+                    <div class="stage-header">
+                        <div class="a11y-controls">
+                            <button class="btn-move btn-move-up" aria-label="Move stage up">
+                                <svg><use href="#icon-arrow-up" /></svg>
+                            </button>
+                            <button class="btn-move btn-move-down" aria-label="Move stage down">
+                                <svg><use href="#icon-arrow-down" /></svg>
+                            </button>
+                        </div>
+                        <button class="btn-icon btn-toggle-stage-collapse" aria-label="Collapse stage">
+                             <svg class="chevron-icon" style="transform: rotate(90deg);"><use href="#icon-chevron" /></svg>
+                        </button>
+                        <div class="stage-header-main" draggable="true">
+                            <input type="text" class="stage-title-input" placeholder="Stage Title" value="${escapeHTML(title)}">
+                        </div>
+                        <button class="btn btn-danger btn-icon btn-remove-stage" aria-label="Remove Stage">
+                            <svg><use href="#icon-trash" /></svg>
+                        </button>
+                    </div>
+                    <div class="stage-content">
+                        <div class="task-list"></div>
+                        <div style="padding: 0 1.5rem 1.5rem;">
+                            <button class="btn btn-add-task">
+                                <svg width="16" height="16"><use href="#icon-add" /></svg>
+                                Add Task
+                            </button>
+                        </div>
+                    </div>
+                `;
+                stageList.appendChild(stageEl);
+                updateMoveButtons(stageList, '.stage-container');
+                return stageEl;
+            }
+
+             function addTask(taskListEl, task = {}) {
+                const taskId = task.id || `task-${Date.now()}`;
+                const taskEl = document.createElement('div');
+                taskEl.className = 'task-container';
+                taskEl.dataset.id = taskId;
+
+                const linkSectionVisible = task.linkUrl || task.linkTitle || task.isImage;
+
+                taskEl.innerHTML = `
+                    <div class="task-main" draggable="true">
+                         <div class="a11y-controls">
+                            <button class="btn-move btn-move-up" aria-label="Move task up">
+                                <svg><use href="#icon-arrow-up" /></svg>
+                            </button>
+                            <button class="btn-move btn-move-down" aria-label="Move task down">
+                                <svg><use href="#icon-arrow-down" /></svg>
+                            </button>
+                        </div>
+                        <div class="task-inputs">
+                            <input type="text" class="task-description-input" placeholder="Task Description" value="${escapeHTML(task.description || '')}">
+                            <textarea class="task-context-input" placeholder="Context / Tooltip (Optional)">${escapeHTML(task.context || '')}</textarea>
+                        </div>
+                        <button class="btn btn-danger btn-icon btn-remove-task" aria-label="Remove Task">
+                            <svg><use href="#icon-trash" /></svg>
+                        </button>
+                    </div>
+                    <button class="btn-toggle-link">
+                         <svg><use href="#icon-link" /></svg>
+                         <span class="link-btn-text">${linkSectionVisible ? 'Hide Link Options' : '+ Link'}</span>
+                    </button>
+                    <div class="task-link-section ${linkSectionVisible ? '' : 'hidden'}">
+                        <div class="task-link-inputs">
+                             <div class="form-group"> <label for="${taskId}-url">Link URL</label> <input type="url" id="${taskId}-url" class="task-link-url" placeholder="https://... or /img.jpg" value="${escapeHTML(task.linkUrl || '')}"> </div>
+                             <div class="form-group"> <label for="${taskId}-title">Button Title</label> <input type="text" id="${taskId}-title" class="task-link-title" placeholder="Weblink"> </div>
+                             <div class="is-image-group"> <input type="checkbox" id="${taskId}-isimage" class="task-link-isimage" ${task.isImage ? 'checked' : ''}> <label for="${taskId}-isimage">Is Image?</label> </div>
+                        </div>
+                    </div>
+                `;
+                 const titleInput = taskEl.querySelector('.task-link-title');
+                 if(task.linkTitle) titleInput.value = escapeHTML(task.linkTitle);
+
+                taskListEl.appendChild(taskEl);
+                updateMoveButtons(taskListEl, '.task-container');
+                return taskEl;
+            }
+            
+            // --- Collapse/Expand Functions ---
+            function toggleStageCollapse(stageContainer) {
+                stageContainer.classList.toggle('collapsed');
+                const icon = stageContainer.querySelector('.btn-toggle-stage-collapse svg');
+                if (stageContainer.classList.contains('collapsed')) {
+                    icon.style.transform = 'rotate(0deg)';
+                } else {
+                    icon.style.transform = 'rotate(90deg)';
+                }
+            }
+            
+            function handleToggleAllStages() {
+                const stages = document.querySelectorAll('.stage-container');
+                // Check if any stage is *not* collapsed. If so, collapse all.
+                const shouldCollapse = Array.from(stages).some(s => !s.classList.contains('collapsed'));
+                
+                stages.forEach(stage => {
+                    stage.classList.toggle('collapsed', shouldCollapse);
+                    const icon = stage.querySelector('.btn-toggle-stage-collapse svg');
+                    if (shouldCollapse) {
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        icon.style.transform = 'rotate(90deg)';
+                    }
+                });
+                
+                toggleAllStagesBtn.textContent = shouldCollapse ? 'Expand All' : 'Collapse All';
+            }
+
+            // --- Accessibility Move Functions ---
+            function moveItemUp(button) {
+                const item = button.closest('.stage-container, .task-container');
+                const container = item.parentElement;
+                const prev = item.previousElementSibling;
+                if (prev) {
+                    container.insertBefore(item, prev);
+                    updateMoveButtons(container, item.matches('.stage-container') ? '.stage-container' : '.task-container');
+                }
+                 item.querySelector('.btn-move-up').focus();
+            }
+
+            function moveItemDown(button) {
+                const item = button.closest('.stage-container, .task-container');
+                const container = item.parentElement;
+                const next = item.nextElementSibling;
+                if (next) {
+                    container.insertBefore(next, item);
+                    updateMoveButtons(container, item.matches('.stage-container') ? '.stage-container' : '.task-container');
+                }
+                item.querySelector('.btn-move-down').focus();
+            }
+            
+            function updateMoveButtons(container, itemSelector) {
+                 const items = container.querySelectorAll(itemSelector);
+                 items.forEach((item, index) => {
+                     const upBtn = item.querySelector('.btn-move-up');
+                     const downBtn = item.querySelector('.btn-move-down');
+                     if(upBtn) upBtn.disabled = (index === 0);
+                     if(downBtn) downBtn.disabled = (index === items.length - 1);
+                 });
+            }
+
+            function toggleLinkSection(button) {
+                const linkSection = button.closest('.task-container').querySelector('.task-link-section');
+                const textSpan = button.querySelector('.link-btn-text');
+                const isHidden = linkSection.classList.toggle('hidden');
+                textSpan.textContent = isHidden ? '+ Link' : 'Hide Link Options';
+            }
+            
+            // --- JSON Structure Converters ---
+            function convertFromTargetJSON(targetData) {
+                 console.log("Attempting to convert new JSON structure...");
+                 const appData = {
+                     metadata: {
+                         title: targetData.metadata.title,
+                         team: targetData.metadata.team || targetData.metadata.customTeam,
+                         workstream: targetData.metadata.workstream || targetData.metadata.customWorkstream,
+                         reviewDate: targetData.metadata.date,
+                         version: targetData.metadata.version,
+                         description: targetData.metadata.rawSopText ? targetData.metadata.rawSopText.split('\n\n')[1] || "Imported from SOP" : ""
+                     },
+                     stages: []
+                 };
+
+                 (targetData.stages || []).forEach(stage => {
+                     const newStage = {
+                         id: stage.id,
+                         title: stage.name,
+                         tasks: []
+                     };
+                     (stage.items || []).forEach(item => {
+                         if(item.type === 'task') {
+                            const newTask = {
+                                id: item.id,
+                                description: item.text,
+                                context: item.context,
+                                linkUrl: item.linkUrl || "", 
+                                linkTitle: item.linkTitle || "",
+                                isImage: item.isImage || (item.images && item.images.length > 0)
+                            };
+                            if (newTask.isImage && !newTask.linkUrl && item.images && item.images.length > 0) {
+                                newTask.linkUrl = item.images[0];
+                                if (!newTask.linkTitle) newTask.linkTitle = "View Image";
+                            }
+                            newStage.tasks.push(newTask);
+                         }
+                     });
+                     appData.stages.push(newStage);
+                 });
+                 return appData;
+             }
+
+            function collectData(fromAutosave = false) {
+                 const data = { metadata: {}, stages: [] };
+                 data.metadata.title = document.getElementById('doc-title').value;
+                 data.metadata.team = document.getElementById('doc-team').value;
+                 data.metadata.workstream = document.getElementById('doc-workstream').value;
+                 data.metadata.reviewDate = document.getElementById('doc-review').value;
+                 data.metadata.version = document.getElementById('doc-version').value;
+                 data.metadata.description = document.getElementById('doc-description').value;
+
+                 document.querySelectorAll('.stage-container').forEach((stageEl, index) => {
+                     const stageData = {
+                         id: stageEl.dataset.id || `stage-${index + 1}`,
+                         title: stageEl.querySelector('.stage-title-input').value,
+                         tasks: []
+                     };
+                     stageEl.querySelectorAll('.task-container').forEach((taskEl, taskIndex) => {
+                         stageData.tasks.push({
+                             id: taskEl.dataset.id || `task-${index + 1}-${taskIndex + 1}`,
+                             description: taskEl.querySelector('.task-description-input').value,
+                             context: taskEl.querySelector('.task-context-input').value,
+                             linkUrl: taskEl.querySelector('.task-link-url').value,
+                             linkTitle: taskEl.querySelector('.task-link-title').value,
+                             isImage: taskEl.querySelector('.task-link-isimage').checked
+                         });
+                     });
+                     data.stages.push(stageData);
+                 });
+                 return data;
+             }
+
+            function populateForm(data) {
+                 stageList.innerHTML = '';
+                 document.getElementById('doc-title').value = data.metadata.title || '';
+                 document.getElementById('doc-team').value = data.metadata.team || '';
+                 document.getElementById('doc-workstream').value = data.metadata.workstream || '';
+                 document.getElementById('doc-review').value = data.metadata.reviewDate || new Date().toISOString().split('T')[0];
+                 document.getElementById('doc-version').value = data.metadata.version || '1.0';
+                 document.getElementById('doc-description').value = data.metadata.description || '';
+                 if (data.stages) {
+                     data.stages.forEach(stage => {
+                         const stageEl = addStage(stage.title);
+                         if(stage.id) stageEl.dataset.id = stage.id;
+                         const taskListEl = stageEl.querySelector('.task-list');
+                         if (stage.tasks) {
+                             stage.tasks.forEach(task => {
+                                 const taskEl = addTask(taskListEl, task);
+                                 if(task.id) taskEl.dataset.id = task.id;
+                             });
+                         }
+                         updateMoveButtons(taskListEl, '.task-container');
+                     });
+                     updateMoveButtons(stageList, '.stage-container');
+                 }
+             }
+
+            function getFilenames(data) {
+                const team = (data.metadata.team || 'Export').replace(/[^a-z0-9]/gi, '_');
+                const title = (data.metadata.title || 'Checklist').replace(/[^a-z0-9]/gi, '_');
+                const date = new Date().toISOString().split('T')[0];
+                const version = (data.metadata.version || '1.0').replace(/[^a-z0-9.]/gi, '_');
+                const base = `${team}-${title}-${date}.${version}`; // ADDED version
+                return { json: `${base}.json`, html: `${base}.html`, csv: `${base}.csv` };
+            }
+
+             function handleGenerate() {
+                const data = collectData();
+                if (!data.metadata.title || !data.metadata.team) {
+                    alert('Please fill in at least the Title and Team fields.'); return false;
+                }
+                const filenames = getFilenames(data);
+                generateJSON(data, filenames.json);
+                generateHTML(data, filenames.html);
+                return true;
+             }
+
+             function handleGenerateCSV() {
+                 const data = collectData();
+                 if (!data.stages || data.stages.length === 0) {
+                     alert("Please add at least one stage and task before generating CSV."); return;
+                 }
+                 const filenames = getFilenames(data);
+                 generateCSV(data, filenames.csv);
+             }
+             
+             function handleDownloadFormDataJson() {
+                const data = collectData(true);
+                 if (!data.metadata.title || !data.metadata.team) {
+                    alert('Please fill in at least the Title and Team fields before downloading JSON.');
+                    return;
+                }
+                const filenames = getFilenames(data);
+                generateJSON(data, filenames.json);
+            }
+
+            function generateJSON(data, filename) {
+                 const jsonString = JSON.stringify(data, null, 4);
+                 const blob = new Blob([jsonString], { type: 'application/json' });
+                 downloadBlob(blob, filename);
+            }
+
+            function generateHTML(data, filename) {
+                 const htmlString = createChecklistTemplate(data);
+                 const blob = new Blob([htmlString], { type: 'text/html' });
+                 downloadBlob(blob, filename);
+            }
+
+             function generateCSV(data, filename) {
+                 let csvContent = "Stage Title,Task Description,Context,Link URL\n";
+                 data.stages.forEach(stage => {
+                     const stageTitle = `"${(stage.title || '').replace(/"/g, '""')}"`;
+                     if (stage.tasks && stage.tasks.length > 0) {
+                         stage.tasks.forEach(task => {
+                             const taskDesc = `"${(task.description || '').replace(/"/g, '""')}"`;
+                             const taskCtx = `"${(task.context || '').replace(/"/g, '""')}"`;
+                             const taskLink = `"${(task.linkUrl || '').replace(/"/g, '""')}"`;
+                             csvContent += `${stageTitle},${taskDesc},${taskCtx},${taskLink}\n`;
+                         });
+                     } else {
+                         csvContent += `${stageTitle},,,\n`;
+                     }
+                 });
+                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                 downloadBlob(blob, filename);
+             }
+
+            function handleImport(e) {
+                 const file = e.target.files[0]; if (!file) return;
+                 const reader = new FileReader();
+                 reader.onload = (event) => {
+                     let data;
+                     try {
+                         data = JSON.parse(event.target.result);
+                     } catch (err) {
+                         alert('Error: Could not parse JSON file. Is it valid?'); console.error(err); return;
+                     }
+                     
+                     // Check for structure
+                     if (data.metadata && data.stages && data.stages[0] && typeof data.stages[0].tasks !== 'undefined') {
+                        console.log("Importing native format.");
+                        populateForm(data);
+                     } else if (data.metadata && data.stages && data.stages[0] && typeof data.stages[0].items !== 'undefined') {
+                        console.log("Importing new target format. Converting...");
+                        try {
+                            const appData = convertFromTargetJSON(data);
+                            populateForm(appData);
+                        } catch (convertErr) {
+                            alert("Error: Tried to convert new JSON structure but failed."); console.error(convertErr);
+                        }
+                     } else {
+                         alert("Error: JSON structure not recognized. Expected 'stages' array with either 'tasks' or 'items' arrays inside.");
+                     }
+                     
+                     llmErrorContainer.style.display = 'none';
+                     triggerAutosave();
+                 };
+                 reader.readAsText(file); e.target.value = null;
+            }
+
+            function loadExampleData() {
+                 populateForm({
+                    "metadata": {
+                        "title": "Example SOP", "team": "Demo Team", "workstream": "General",
+                        "reviewDate": new Date().toISOString().split('T')[0], "version":"1.0",
+                        "description": "This is a simple example checklist with various features."
+                     },
+                    "stages": [
+                        { "id": "stage-1", "title": "Stage 1: Example", "tasks": [
+                            { "id": "task-1-1", "description": "Example Task 1." },
+                            { "id": "task-1-2", "description": "Task with Context.", "context": "Some context here.\nMore details on another line."},
+                            { "id": "task-1-3", "description": "Task with Link.", "linkUrl": "https://nhs.uk", "linkTitle": "Visit NHS"},
+                            { "id": "task-1-4", "description": "Task with Image.", "linkUrl": "https://via.placeholder.com/300", "linkTitle": "View Placeholder", "isImage": true}
+                        ]},
+                        { "id": "stage-2", "title": "Stage 2: Another Example", "tasks": [ { "id": "task-2-1", "description": "Another Task." } ] }
+                    ]
+                 });
+                triggerAutosave();
+                alert("A simplified example with links/images has been loaded.");
+            }
+
+            // --- LLM-Specific Functions ---
+            function createLLMPrompt(sopText, todayDate) {
+                 return `You are an expert Finance Business Analyst and Process Improvement Specialist. Your task is to analyse a raw Standard Operating Procedure (SOP) and transform it into a high-quality, actionable JSON checklist.
+The goal is not just to list steps, but to create a checklist that *actively supports* a user in completing the process accurately. This means extracting key details, file paths, codes (like \`LSF/9723\`), and decision points into the \`context\` field for the relevant task. Output must use British English spelling (e.g., analyse, organise, colour).
+
+Here is the required JSON structure including new link fields:
+\`\`\`json
+{
+  "metadata": {
+    "title": "Document Title (e.g., TM 0001 Receipting SOP)",
+    "team": "Team Name (e.g., Treasury Management)",
+    "workstream": "Workstream (e.g., Learning Support Fund (LSF))",
+    "reviewDate": "YYYY-MM-DD",
+    "version": "1.0",
+    "description": "A 1-2 sentence summary of the whole process."
+  },
+  "stages": [
+    {
+      "id": "stage-1",
+      "title": "Name of the first stage (e.g., Obtain Bank Statement)",
+      "tasks": [
+        {
+          "id": "task-1-1",
+          "description": "The first task in stage 1.",
+          "context": "Optional: Any extra details, tooltips, file paths, codes, specific instructions, or notes for this task. Can be an empty string.",
+          "linkUrl": "Optional: A relevant URL mentioned in the text for *this task*. Use empty string if none.",
+          "linkTitle": "Optional: A concise (2-3 word) title for the link button. Default to 'Weblink' if a URL exists but no title is obvious. Use empty string if no URL.",
+          "isImage": false
+        }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+Please follow these rules meticulously:
+1.  **Persona**: Act as an expert process analyst focusing on clarity and user support.
+2.  **Analyse Metadata**: Extract \`title\`, \`team\`, and \`workstream\` from the text. Be precise.
+3.  **Static Metadata**: Use \`${todayDate}\` for \`reviewDate\` and "1.0" for \`version\`.
+4.  **Description**: Write a concise 1-2 sentence summary for \`description\`.
+5.  **Identify Stages**: Group the SOP into logical \`stages\`. Each must have a clear \`title\` (e.g., "Stage 1: Obtain Bank Statement").
+6.  **Derive Tasks**: Break down each stage into an array of simple, actionable \`tasks\`. Start tasks with verbs where possible.
+7.  **Extract Context**: Extract supporting info into \`context\`.
+8.  **Extract Links**: If a task mentions a URL: Populate \`linkUrl\`, create \`linkTitle\` (default "Weblink"), set \`isImage\` to \`true\` if image extension, else \`false\`. If no URL, leave fields empty/false.
+9.  **IDs**: Ensure \`id\` fields are unique and sequential (stage-1, task-1-1, task-1-2, stage-2, task-2-1...).
+10. **Output**: Provide *only* the raw JSON object, starting with \`{\` and ending with \`}\`. Do not include \`\`\`json\`\`\` markers.
+
+Now, please analyse and convert the following SOP text:
+
+---
+SOP TEXT STARTS HERE
+---
+
+${sopText}
+
+---
+SOP TEXT ENDS HERE
+---
+`;
+             }
+
+            function handleGeneratePrompt() {
+                 const text = llmSopText.value; if (!text.trim()) { alert("Paste SOP text first."); return; }
+                 const today = new Date().toISOString().split('T')[0];
+                 const promptString = createLLMPrompt(text, today);
+                 llmPromptOutput.value = promptString;
+                 navigator.clipboard.writeText(promptString).then(() => {
+                    const btn = llmGeneratePromptBtn; const originalHTML = btn.innerHTML; btn.innerHTML = "Copied!"; btn.disabled = true; setTimeout(() => { btn.innerHTML = '<svg width="20" height="20"><use href="#icon-copy" /></svg> Generate & Copy Prompt'; btn.disabled = false; }, 2000);
+                 }).catch(err => { alert("Failed to copy prompt."); });
+            }
+             function handleLLMGenerate() {
+                 const jsonString = llmJsonInput.value; if (!jsonString.trim()) { alert("Paste JSON first."); return; }
+                 let data;
+                 try {
+                     const cleanJsonString = jsonString.replace(/^```json\n/, '').replace(/\n```$/, '');
+                     data = JSON.parse(cleanJsonString);
+                     llmErrorContainer.style.display = 'none';
+                 } catch (e) {
+                     const debugPrompt = `The previous JSON response was invalid. Please fix it according to the original instructions (pay attention to structure, commas, quotes, and providing ONLY the JSON object).\nError: ${e.message}\n\nInvalid JSON Provided:\n\`\`\`json\n${jsonString}\n\`\`\`\n\nPlease correct the JSON and provide *only* the raw, valid JSON object, starting with { and ending with }.`;
+                     llmErrorDebugPrompt.value = debugPrompt;
+                     llmErrorContainer.style.display = 'flex';
+                     return;
+                 }
+                 
+                 // Check which format was pasted
+                 if (data.metadata && data.stages && data.stages[0] && typeof data.stages[0].tasks !== 'undefined') {
+                    console.log("Loading native format from LLM.");
+                    populateForm(data);
+                 } else if (data.metadata && data.stages && data.stages[0] && typeof data.stages[0].items !== 'undefined') {
+                    console.log("Loading new target format from LLM. Converting...");
+                    try {
+                        const appData = convertFromTargetJSON(data);
+                        populateForm(appData);
+                    } catch (convertErr) {
+                        alert("Error: Tried to convert LLM's JSON structure but failed."); console.error(convertErr);
+                        return;
+                    }
+                 } else {
+                     alert("Error: JSON structure from LLM not recognized.");
+                     return;
+                 }
+                 
+                 const success = handleGenerate();
+                 if (success) { triggerAutosave(); alert("Checklist generated and files downloaded!"); document.querySelector('.card details')?.setAttribute('open', ''); window.scrollTo(0,0); }
+             }
+            function copyLLMDebugPrompt() {
+                 navigator.clipboard.writeText(llmErrorDebugPrompt.value).then(() => {
+                    const btn = llmCopyDebugBtn; const originalHTML = btn.innerHTML; btn.innerHTML = "Copied Debug Prompt!"; btn.disabled = true; setTimeout(() => { btn.innerHTML = '<svg width="20" height="20"><use href="#icon-copy" /></svg> Copy Debug Prompt'; btn.disabled = false; }, 2000);
+                 }).catch(err => { alert("Failed to copy debug prompt."); });
+            }
+
+            // --- Autosave Functions ---
+            function triggerAutosave() { clearTimeout(autosaveTimeout); autosaveTimeout = setTimeout(saveCreatorState, 500); }
+            function saveCreatorState() { const data = collectData(true); localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data)); console.log("Autosaved."); }
+            function loadCreatorState() { const savedData = localStorage.getItem(AUTOSAVE_KEY); if (savedData) { try { const data = JSON.parse(savedData); populateForm(data); console.log("Loaded autosave."); } catch (e) { console.error("Error loading autosave:", e); localStorage.removeItem(AUTOSAVE_KEY); } } }
+            function handleClearForm() { if (confirm("Clear form and autosave?")) { document.getElementById('metadata-form').reset(); reviewDateInput.valueAsDate = new Date(); stageList.innerHTML = ''; localStorage.removeItem(AUTOSAVE_KEY); console.log("Form cleared."); } }
+
+            // --- Drag & Drop Handlers ---
+            function handleDragStart(e) {
+                const draggable = e.target.closest('[draggable="true"]');
+                if (draggable && (draggable.classList.contains('stage-header-main') || draggable.classList.contains('task-main'))) {
+                    draggedItem = draggable.closest('.stage-container, .task-container');
+                    setTimeout(() => draggedItem.classList.add('dragging'), 0);
+                    e.dataTransfer.effectAllowed = 'move';
+                } else if (draggable) {
+                    // Prevent drag on buttons, but allow on main draggable area
+                } else {
+                    e.preventDefault();
+                }
+            }
+            function handleDragEnd(e) { if (draggedItem) draggedItem.classList.remove('dragging'); document.querySelectorAll('.drag-over, .stage-drag-over').forEach(el => el.classList.remove('drag-over', 'stage-drag-over')); draggedItem = null; triggerAutosave(); }
+            function handleDragOver(e) { e.preventDefault(); if (!draggedItem) return; const target = e.target; document.querySelectorAll('.drag-over, .stage-drag-over').forEach(el => el.classList.remove('drag-over', 'stage-drag-over')); if (draggedItem.matches('.stage-container')) { const afterElement = getDragAfterElement(stageList, e.clientY, '.stage-container'); if (afterElement == null) { stageList.classList.add('stage-drag-over'); } else { afterElement.classList.add('stage-drag-over'); } } else if (draggedItem.matches('.task-container')) { const taskList = target.closest('.task-list'); if (taskList) { const afterElement = getDragAfterElement(taskList, e.clientY, '.task-container'); if (afterElement == null) { if (taskList.children.length > 0 && taskList.lastElementChild !== draggedItem) { taskList.lastElementChild.classList.add('drag-over'); } else if (taskList.children.length === 0 || (taskList.children.length === 1 && taskList.firstElementChild === draggedItem)) { taskList.classList.add('drag-over'); }} else { afterElement.classList.add('drag-over'); } } } }
+            function handleDrop(e) { e.preventDefault(); if (!draggedItem) return; document.querySelectorAll('.drag-over, .stage-drag-over').forEach(el => el.classList.remove('drag-over', 'stage-drag-over')); if (draggedItem.matches('.stage-container')) { const afterElement = getDragAfterElement(stageList, e.clientY, '.stage-container'); if (afterElement == null) { stageList.appendChild(draggedItem); } else { stageList.insertBefore(draggedItem, afterElement); } updateMoveButtons(stageList, '.stage-container'); } else if (draggedItem.matches('.task-container')) { const taskList = e.target.closest('.task-list'); if (taskList) { const afterElement = getDragAfterElement(taskList, e.clientY, '.task-container'); if (afterElement == null) { taskList.appendChild(draggedItem); } else { taskList.insertBefore(draggedItem, afterElement); } updateMoveButtons(taskList, '.task-container'); } } triggerAutosave(); }
+            function getDragAfterElement(container, y, selector) { const draggableElements = [...container.querySelectorAll(`${selector}:not(.dragging)`)]; return draggableElements.reduce((closest, child) => { const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 1.5; if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; } }, { offset: Number.NEGATIVE_INFINITY }).element; }
+
+            // --- Helper Functions ---
+            function downloadBlob(blob, filename) { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
+            function escapeHTML(str) { if (!str) return ''; return str.toString().replace(/[&<>"']/g, match => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[match])); }
+
+             // --- Handler for bottom Download JSON button ---
+             function handleDownloadFormDataJson() {
+                const data = collectData(true);
+                 if (!data.metadata.title || !data.metadata.team) {
+                    alert('Please fill in at least the Title and Team fields before downloading JSON.');
+                    return;
+                }
+                const filenames = getFilenames(data);
+                generateJSON(data, filenames.json);
+            }
+
+
+            // --- HTML Checklist Template ---
+            function createChecklistTemplate(data) {
+                const { metadata, stages } = data;
+
+                // --- FIX: Pre-calculate keys ---
+                const teamKeyRaw = (metadata.team || 'UnknownTeam').replace(/[^a-zA-Z0-9_-]/g, '_');
+                const titleKeyRaw = (metadata.title || 'UnknownTitle').replace(/[^a-zA-Z0-9_-]/g, '_');
+                const stateKeyStringEscaped = `nhsChecklistState_${teamKeyRaw}-${titleKeyRaw}`.replace(/['\\]/g, '\\$&');
+                const undoKeyStringEscaped = `nhsChecklistUndoState_${teamKeyRaw}-${titleKeyRaw}`.replace(/['\\]/g, '\\$&');
+                // --- END FIX ---
+
+
+                const svgDefs = `<svg width="0" height="0" style="position:absolute" class="svg-defs"> <defs> <svg id="icon-task" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-5L9 4H4zm0 2h5l2 2h5v6H4V6z" clip-rule="evenodd" /></svg> <svg id="icon-chevron" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg> <svg id="icon-info" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg> <svg id="icon-check-box" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> <svg id="icon-box" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 6.176a6 6 0 018.492 8.492 6 6 0 01-8.492-8.492z" clip-rule="evenodd" /></svg> <svg id="icon-download" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 9.293a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg> <svg id="icon-eye" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" /></svg> </defs> </svg>`;
+
+                const stagesHTML = stages.map((stage, stageIndex) => `
+                    <details class="task-section" ${stageIndex === 0 ? 'open' : ''} data-stage-container="${escapeHTML(stage.id)}">
+                        <summary>
+                            <span class="stage-title"> <svg class="chevron-icon"><use href="#icon-chevron" /></svg> ${escapeHTML(stage.title || 'Untitled Stage')} </span>
+                            <div class="stage-controls">
+                                <button class="btn-toggle-context" data-stage-id="${escapeHTML(stage.id)}" title="Toggle all context notes in this stage">
+                                    <svg width="16" height="16"><use href="#icon-eye"/></svg> Toggle Context
+                                </button>
+                                <button class="btn-tick-all" data-stage-id="${escapeHTML(stage.id)}" title="Tick all in this stage">Tick All</button>
+                                <span class="stage-progress" data-stage="${escapeHTML(stage.id)}">0 / ${stage.tasks ? stage.tasks.length : 0} Tasks</span>
+                            </div>
+                        </summary>
+                        <div class="task-list-content">
+                            ${(stage.tasks || []).map(task => {
+                                let linkButtonHTML = '';
+                                if (task.linkUrl) {
+                                    const title = escapeHTML(task.linkTitle || (task.isImage ? 'View Image' : 'Weblink'));
+                                    const url = escapeHTML(task.linkUrl);
+                                    if (task.isImage) { linkButtonHTML = `<button class="btn-task-link image-link" data-img-src="${url}">${title}</button>`; }
+                                    else { linkButtonHTML = `<a href="${url}" class="btn-task-link" target="_blank" rel="noopener noreferrer">${title}</a>`; }
+                                }
+                                return `
+                                <div class="task-item-container" data-task-text="${escapeHTML((task.description || '') + ' ' + (task.context || '')).toLowerCase()}">
+                                    <div class="task-item">
+                                        <input type="checkbox" id="${escapeHTML(task.id)}" class="task-checkbox" data-stage="${escapeHTML(stage.id)}">
+                                        <label for="${escapeHTML(task.id)}" tabindex="0">
+                                            <span class="custom-checkbox"> <svg class="unchecked-icon"><use href="#icon-box" /></svg> <svg class="checked-icon"><use href="#icon-check-box" /></svg> </span>
+                                            <svg class="task-icon"><use href="#icon-task" /></svg> <span class="task-description-text">${escapeHTML(task.description)}</span>
+                                        </label>
+                                        ${linkButtonHTML}
+                                        ${task.context ? `<button class="info-toggle-button" aria-label="Show context for ${escapeHTML(task.description)}"> <svg class="info-toggle-icon"><use href="#icon-info" /></svg> </button>` : ''}
+                                    </div>
+                                    ${task.context ? `<div class="task-context"> ${escapeHTML(task.context).replace(/\n/g, '<br>')} </div>` : ''}
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </details>
+                `).join('');
+
+                // --- THIS IS THE GENERATED HTML FILE ---
+                return `<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>${escapeHTML(metadata.title)}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+        :root {
+            --nhs-blue: #005EB8; --nhs-dark-blue: #003087; --nhs-bright-blue: #0072CE;
+            --nhs-light-grey: #F0F4F5; --nhs-mid-grey: #E8EDEE; --nhs-dark-grey: #425563;
+            --nhs-text: #212B32; --nhs-green: #007F3B; --nhs-white: #FFFFFF; --nhs-red: #DA291C;
+            
+            /* --- Semantic Theme Variables (Light) --- */
+            --color-page-bg: var(--nhs-light-grey);
+            --color-card-bg: var(--nhs-white);
+            --color-text-primary: var(--nhs-text);
+            --color-text-secondary: var(--nhs-dark-grey);
+            --color-header-bg: var(--nhs-dark-blue);
+            --color-header-text: var(--nhs-white);
+            --color-border-primary: var(--nhs-mid-grey);
+            --color-border-secondary: var(--nhs-light-grey);
+            --color-button-primary-bg: var(--nhs-blue);
+            --color-button-primary-text: var(--nhs-white);
+            --color-button-primary-hover: var(--nhs-dark-blue);
+            --color-button-secondary-bg: var(--nhs-mid-grey);
+            --color-button-secondary-text: var(--nhs-dark-grey);
+            --color-button-secondary-hover-bg: var(--nhs-dark-grey);
+            --color-button-secondary-hover-text: var(--nhs-white);
+            --color-link: var(--nhs-blue);
+            --color-context-bg: var(--nhs-light-grey);
+            --color-context-border: var(--nhs-mid-grey);
+        }
+        
+        body.dark-theme {
+            --color-page-bg: #0A1A2E;
+            --color-card-bg: #003087;
+            --color-text-primary: var(--nhs-white);
+            --color-text-secondary: var(--nhs-mid-grey);
+            --color-header-bg: #002363;
+            --color-header-text: var(--nhs-white);
+            --color-border-primary: #004a9c;
+            --color-border-secondary: #003087;
+            --color-button-primary-bg: var(--nhs-green);
+            --color-button-primary-text: var(--nhs-white);
+            --color-button-primary-hover: #00632f;
+            --color-button-secondary-bg: var(--nhs-dark-grey);
+            --color-button-secondary-text: var(--nhs-light-grey);
+            --color-button-secondary-hover-bg: var(--nhs-text);
+            --color-button-secondary-hover-text: var(--nhs-white);
+            --color-link: var(--nhs-bright-blue);
+            --color-context-bg: #004a9c;
+            --color-context-border: var(--nhs-blue);
+        }
+
+        body { font-family: 'Roboto', sans-serif; background-color: var(--color-page-bg); color: var(--color-text-primary); margin: 0; padding: 2rem; line-height: 1.6; transition: background-color 0.2s, color 0.2s; }
+        :focus-visible { outline: 3px solid var(--nhs-blue); outline-offset: 2px; border-radius: 2px; }
+        .dashboard-container { max-width: 900px; margin: auto; }
+        header { padding: 1.5rem 2rem; background-color: var(--color-header-bg); color: var(--color-header-text); border-radius: 12px; margin-bottom: 2rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
+        header h1 { margin: 0; font-weight: 700; font-size: 1.75rem; }
+        header p { margin: 0.25rem 0 0; font-size: 1.1rem; opacity: 0.9; }
+        .introduction-section { background-color: var(--color-card-bg); border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+        .introduction-section summary { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; cursor: pointer; list-style: none; font-size: 1.25rem; font-weight: 700; color: var(--color-text-primary); }
+        .introduction-section summary::-webkit-details-marker { display: none; }
+        .introduction-section summary:hover { background-color: rgba(255,255,255,0.05); border-radius: 12px 12px 0 0; }
+        .introduction-content { padding: 0 1.5rem 1.5rem; border-top: 1px solid var(--color-border-primary); }
+        .introduction-content h3 { color: var(--color-text-primary); margin-top: 1.5rem; margin-bottom: 0.5rem; } 
+        body:not(.dark-theme) .introduction-content h3 { color: var(--nhs-blue); }
+        .metadata-grid { display: grid; grid-template-columns: max-content 1fr; gap: 0.75rem 1rem; background-color: var(--color-page-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--color-border-primary); }
+        .metadata-grid span:nth-child(odd) { font-weight: 600; color: var(--color-text-secondary); }
+        .progress-tracker { padding: 1.5rem; background-color: var(--color-card-bg); border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+        .progress-label { display: flex; justify-content: space-between; align-items: center; font-weight: 600; margin-bottom: 0.75rem; color: var(--color-text-primary); font-size: 1.1rem; }
+        .progress-container { width: 100%; height: 16px; background-color: var(--color-border-primary); border-radius: 8px; overflow: hidden; }
+        .progress-bar { width: 0%; height: 100%; background-color: var(--nhs-bright-blue); transition: width 0.4s cubic-bezier(0.25, 0.1, 0.25, 1); }
+        .controls-bar { padding: 1rem 1.5rem; background-color: var(--color-card-bg); border-radius: 12px; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); display: flex; flex-wrap: wrap; gap: 1rem; justify-content: flex-end; align-items: center; }
+        .control-button { display: inline-block; border: none; padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; }
+        .control-button.clear { background-color: var(--color-button-secondary-bg); color: var(--color-button-secondary-text); }
+        .control-button.clear:hover { background-color: var(--nhs-red); color: var(--nhs-white); }
+        .control-button.undo { background-color: var(--color-button-primary-bg); color: var(--color-button-primary-text); }
+        .control-button.undo:hover { background-color: var(--color-button-primary-hover); }
+        .search-bar { padding: 1rem 1.5rem; background-color: var(--color-card-bg); border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 0.5rem; }
+        .search-bar label { font-weight: 600; color: var(--color-text-secondary); }
+        .search-bar input[type="search"] { flex-grow: 1; padding: 0.6rem; border: 2px solid var(--color-border-primary); border-radius: 6px; font-size: 1rem; background-color: var(--color-page-bg); color: var(--color-text-primary); }
+        .search-bar input[type="search"]:focus { border-color: var(--nhs-blue); outline: none; }
+        .task-section { background-color: var(--color-card-bg); border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); transition: all 0.2s ease-in-out; }
+        .task-section:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08); }
+        .task-section summary { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; cursor: pointer; list-style: none; font-size: 1.25rem; font-weight: 700; color: var(--color-text-primary); }
+        .task-section summary::-webkit-details-marker { display: none; }
+        .task-section summary:hover { background-color: rgba(255,255,255,0.05); border-radius: 12px 12px 0 0; }
+        .chevron-icon { width: 20px; height: 20px; margin-right: 0.75rem; transition: transform 0.2s ease-in-out; color: var(--nhs-bright-blue); }
+        .task-section[open] > summary .chevron-icon, .introduction-section[open] > summary .chevron-icon { transform: rotate(90deg); }
+        .stage-title { display: flex; align-items: center; flex-grow: 1; margin-right: 1rem; }
+        .stage-controls { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; flex-wrap: wrap; }
+        .btn-tick-all, .btn-toggle-context { background-color: var(--color-button-secondary-bg); color: var(--color-button-secondary-text); font-size: 0.8rem; font-weight: 600; padding: 0.25rem 0.75rem; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem;}
+        .btn-tick-all:hover, .btn-toggle-context:hover { background-color: var(--color-button-secondary-hover-bg); color: var(--color-button-secondary-hover-text); }
+        .btn-toggle-context svg { width: 14px; height: 14px; }
+        .stage-progress { font-size: 0.9rem; font-weight: 600; padding: 0.25rem 0.75rem; border-radius: 20px; background-color: var(--color-border-primary); color: var(--color-text-secondary); transition: all 0.3s ease; white-space: nowrap; }
+        .stage-progress.complete { background-color: var(--nhs-green); color: var(--nhs-white); }
+        .task-list-content { padding: 0 1.5rem 1.5rem; border-top: 1px solid var(--color-border-primary); }
+        .task-item-container { border-bottom: 1px solid var(--color-border-secondary); transition: opacity 0.3s ease-out, max-height 0.4s ease-out, transform 0.3s ease-out, margin 0.4s ease-out, padding 0.4s ease-out; max-height: 500px; opacity: 1; overflow: hidden;}
+        .task-item-container:last-child { border-bottom: none; }
+        .task-item-container.hidden { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; border-bottom: none; margin-top: -1px; }
+        .task-item { display: flex; align-items: center; padding: 0.75rem 0.5rem; }
+        .task-item input[type="checkbox"] { display: none; }
+        .task-item label { cursor: pointer; font-size: 1rem; user-select: none; transition: color 0.2s, opacity 0.2s; display: flex; align-items: center; flex-grow: 1; padding: 2px; margin-left: -2px; border-radius: 4px; }
+        .task-icon { width: 20px; height: 20px; margin-right: 10px; flex-shrink: 0; color: var(--color-text-secondary); }
+        .custom-checkbox { position: relative; width: 24px; height: 24px; margin-right: 16px; flex-shrink: 0; }
+        .custom-checkbox svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transition: all 0.2s ease; }
+        .checked-icon { opacity: 0; transform: scale(0.5); color: var(--nhs-green); }
+        .unchecked-icon { color: var(--color-text-secondary); }
+        body:not(.arcade-mode-active) .task-item input:checked + label { color: var(--color-text-secondary); text-decoration: line-through; opacity: 0.7; }
+        .task-item input:checked + label .checked-icon { opacity: 1; transform: scale(1); }
+        .task-item input:checked + label .unchecked-icon { opacity: 0; }
+        @keyframes blastAway { 0% { transform: scale(1); opacity: 1; max-height: 150px; } 30% { transform: scale(1.05) rotate(-1deg); opacity: 0.8; } 100% { transform: scale(0.8); opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin: 0; border: 0; } }
+        body.arcade-mode-active .task-item-container:has(input:checked) { animation: blastAway 0.5s forwards ease-in; padding-top: 0; padding-bottom: 0; margin-top: -1px; border-bottom: 0; }
+        .info-toggle-button { background: none; border: none; padding: 0; margin: 0; cursor: pointer; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; margin-left: 0.5rem; color: var(--nhs-bright-blue); transition: transform 0.2s ease, color 0.2s ease, background-color 0.2s ease; }
+        .info-toggle-button:hover { color: var(--nhs-dark-blue); background-color: var(--color-border-primary); }
+        .info-toggle-button .info-toggle-icon { width: 20px; height: 20px; }
+        .info-toggle-button.active { transform: rotate(90deg); color: var(--nhs-dark-blue); background-color: var(--color-border-primary); }
+        .task-context { max-height: 0; overflow: hidden; background-color: var(--color-context-bg); margin: 0 0.5rem 0.75rem 0.5rem; border-radius: 8px; transition: max-height 0.3s ease-out, padding 0.3s ease-out, border 0.3s ease-out; font-size: 0.9rem; color: var(--color-text-primary); border: 0px solid var(--color-context-border); padding: 0 1rem;}
+        .task-context.visible { max-height: 200px; padding: 0.75rem 1rem; border-width: 1px; }
+        .task-context strong { color: var(--nhs-blue); }
+        body.dark-theme .task-context strong { color: var(--nhs-white); }
+        .task-context code { background-color: var(--color-border-primary); padding: 0.1em 0.4em; border-radius: 4px; font-family: monospace; color: var(--color-text-primary); }
+        #completion-message { display: none; padding: 3rem 2rem; text-align: center; background-color: var(--color-card-bg); border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+        #completion-message h2 { font-size: 2rem; color: var(--nhs-green); margin: 0 0 1rem; }
+        #completion-message p { font-size: 1.1rem; color: var(--color-text-primary); margin-bottom: 1.5rem; }
+        .reset-button { display: inline-block; background-color: var(--color-button-primary-bg); color: var(--color-button-primary-text); padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; }
+        .reset-button:hover { background-color: var(--color-button-primary-hover); }
+        #pdf-download-btn { background-color: var(--nhs-dark-blue); margin-bottom: 1rem; }
+        #pdf-download-btn:hover { background-color: var(--nhs-blue); }
+        .btn-task-link { display: inline-block; text-decoration: none; background-color: var(--nhs-bright-blue); color: var(--nhs-white); padding: 0.3rem 0.8rem; margin-left: auto; margin-right: 0.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 500; border: none; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; flex-shrink: 0; }
+        .btn-task-link:hover { background-color: var(--nhs-dark-blue); }
+        .lightbox-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s linear 0.3s; z-index: 1000; }
+        .lightbox-overlay.visible { opacity: 1; visibility: visible; transition-delay: 0s; }
+        .lightbox-content { position: relative; max-width: 90%; max-height: 90%; }
+        .lightbox-content img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; border-radius: 4px; }
+        .lightbox-close { position: absolute; top: -35px; right: -15px; background: white; border: none; font-size: 2rem; line-height: 1; padding: 0 0.5rem; cursor: pointer; color: black; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; }
+        .download-json-container { padding: 1.5rem; text-align: center; margin-top: 1rem; border-top: 1px solid var(--color-border-primary); display: flex; justify-content: center; gap: 1.5rem; align-items: center; flex-wrap: wrap; background-color: var(--color-card-bg); border-radius: 0 0 12px 12px; }
+        #download-json-btn-bottom { background-color: var(--color-button-secondary-bg); color: var(--color-button-secondary-text); }
+        #download-json-btn-bottom:hover { background-color: var(--color-button-secondary-hover-bg); color: var(--color-button-secondary-hover-text); }
+        
+        /* --- Arcade Mode Toggle Switch (Header) --- */
+        .arcade-toggle-pill { background-color: rgba(0,0,0,0.2); padding: 0.5rem 1rem; border-radius: 20px; display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;}
+        .arcade-toggle-label { font-size: 0.9rem; font-weight: 600; color: var(--color-header-text); }
+        .arcade-toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .arcade-toggle-switch .slider { width: 40px; height: 22px; background-color: var(--nhs-dark-grey); /* OFF Color */ border-radius: 11px; cursor: pointer; position: relative; transition: background-color 0.2s; }
+        .arcade-toggle-switch .slider::before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: transform 0.2s; }
+        .arcade-toggle-switch input:checked + .slider { background-color: var(--nhs-green); } /* ON Color */
+        .arcade-toggle-switch input:focus-visible + .slider { box-shadow: 0 0 0 3px var(--nhs-white); }
+        .arcade-toggle-switch input:checked + .slider::before { transform: translateX(18px); }
+        
+        /* --- Theme Toggle Switch (Bottom) --- */
+        .theme-toggle { display: flex; align-items: center; gap: 0.5rem; }
+        .theme-toggle-label { font-size: 0.9rem; font-weight: 600; color: var(--color-text-secondary); }
+        .theme-toggle input { opacity: 0; width: 0; height: 0; }
+        .theme-toggle .slider { width: 40px; height: 22px; background-color: var(--color-border-primary); border-radius: 11px; cursor: pointer; position: relative; transition: background-color 0.2s; }
+        .theme-toggle .slider::before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: transform 0.2s; }
+        .theme-toggle input:checked + .slider { background-color: var(--nhs-blue); }
+        .theme-toggle input:focus-visible + .slider { box-shadow: 0 0 0 3px var(--nhs-blue); }
+        .theme-toggle input:checked + .slider::before { transform: translateX(18px); }
+
+        /* --- Toast Container --- */
+        #toast-container { position: fixed; bottom: 1rem; left: 1rem; z-index: 1100; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { background-color: var(--nhs-dark-grey); color: var(--nhs-white); padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 1rem; opacity: 0; transform: translateY(20px); animation: fadeIn 0.3s forwards; }
+        .toast-message { font-size: 0.9rem; }
+        .toast-undo-btn { background-color: var(--nhs-bright-blue); color: var(--nhs-white); border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem;}
+        .toast-undo-btn:hover { background-color: var(--nhs-blue); }
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+        .toast.fade-out { animation: fadeOut 0.5s forwards; }
+        @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); } }
+        
+        /* --- PDF Report Header --- */
+        #pdf-report-header { display: none; } /* Hide on screen */
+
+        /* --- Print Styles --- */
+        @media print {
+            body { padding: 1rem; background-color: white; color: black; font-size: 10pt; }
+            header, .progress-tracker, .controls-bar, .search-bar, .info-toggle-button, .btn-tick-all, .reset-button, #completion-message, #download-json-btn-bottom, .btn-toggle-context, .arcade-toggle-pill, .download-json-container, .theme-toggle, .lightbox-overlay { display: none; }
+            #pdf-download-btn { display: none; }
+            .dashboard-container { max-width: 100%; margin: 0; }
+            .card, .introduction-section, .task-section { box-shadow: none; border: 1px solid var(--nhs-mid-grey); margin-bottom: 1rem; border-radius: 0; }
+            .introduction-section, .task-section { page-break-inside: auto; }
+            details { display: block !important; }
+            details[open] > summary { border-bottom: 1px solid var(--nhs-mid-grey); }
+            .card-header, summary { background-color: white !important; padding: 0.5rem; }
+            h1 { font-size: 16pt; } h3 { font-size: 12pt; color: black !important; }
+            .metadata-grid { background-color: white; border: none; padding: 0; }
+            .stage-progress { display: none; } .chevron-icon { display: none; }
+            .task-list-content { padding: 0.5rem; }
+            .task-item-container { border-bottom: 1px dotted var(--nhs-mid-grey); page-break-inside: avoid; }
+            .task-item label { text-decoration: none !important; opacity: 1 !important; color: black !important; }
+            .custom-checkbox { width: 16px; height: 16px; margin-right: 8px; border: 1px solid black; border-radius: 2px; display: inline-block; vertical-align: middle; }
+            .custom-checkbox svg { display: none; }
+            .task-item input:checked + label .custom-checkbox::after { content: '✔'; display: block; text-align: center; line-height: 16px; font-size: 12px; }
+            .task-context { max-height: none !important; padding: 0.5rem; border: 1px dashed var(--nhs-mid-grey); background-color: var(--nhs-light-grey); margin-left: 32px; font-size: 9pt; display: block !important; visibility: visible !important; opacity: 1 !important;}
+            .task-context.visible { max-height: none !important; } .btn-task-link { display: none; }
+            
+            /* PDF Report Header Styles */
+            #pdf-report-header {
+                display: block; text-align: center; margin-bottom: 2rem;
+                border-bottom: 2px solid var(--nhs-dark-blue); padding-bottom: 1rem;
+            }
+            #pdf-report-header h1 { font-size: 18pt; color: var(--nhs-dark-blue); margin: 0; }
+            #pdf-report-header p { font-size: 12pt; color: var(--nhs-dark-grey); margin: 0.25rem 0; }
+            
+            body.printing-report .task-item-container:not(:has(input:checked)) { display: none !important; }
+            body.printing-report .introduction-section { display: none; }
+        }
+    </style>
+</head>
+<body>
+    ${svgDefs}
+    <div class="dashboard-container">
+        <header>
+            <div>
+                <h1>${escapeHTML(metadata.title)}</h1>
+                <p>${escapeHTML(metadata.team)} Checklist</p>
+            </div>
+            <div class="arcade-toggle-pill">
+                <label class="arcade-toggle-label" for="arcade-toggle-switch">Arcade Mode</label>
+                <label class="arcade-toggle-switch">
+                    <input type="checkbox" id="arcade-toggle-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </header>
+
+        <div id="pdf-report-header">
+            <h1>SOP Completion Report</h1>
+            <p id="pdf-report-title">${escapeHTML(metadata.title)}</p>
+            <p id="pdf-report-date">Completed: </p>
+        </div>
+
+        <details class="introduction-section" open>
+             <summary> <span class="stage-title"> <svg class="chevron-icon"><use href="#icon-chevron" /></svg> SOP Introduction & Details </span> </summary>
+             <div class="introduction-content">
+                  <h3>Process Description</h3> <p id="meta-description">${escapeHTML(metadata.description)}</p>
+                  <h3>Document Control</h3>
+                  <div class="metadata-grid">
+                      <span>Document Reference:</span> <span id="meta-ref">${escapeHTML(metadata.title.split(' ')[0])}</span>
+                      <span>Team:</span> <span id="meta-team">${escapeHTML(metadata.team)}</span>
+                      <span>Workstream Service:</span> <span id="meta-workstream">${escapeHTML(metadata.workstream)}</span>
+                      <span>Last Reviewed:</span> <span id="meta-review">${escapeHTML(metadata.reviewDate)}</span>
+                      <span>Version:</span> <span id="meta-version">${escapeHTML(metadata.version)}</span>
+                  </div>
+             </div>
+         </details>
+        <div class="progress-tracker"> <div class="progress-label"> <span>Overall Progress</span> <span id="progress-label-text">0%</span> </div> <div class="progress-container"> <div class="progress-bar" id="progress-bar"></div> </div> </div>
+        <div class="controls-bar"> <button id="undo-clear-button" class="control-button undo" style="display:none;">Undo Clear</button> <button id="clear-all-button" class="control-button clear clear-all-trigger">Clear All</button> </div>
+        <div class="search-bar"> <label for="search-input">Search Tasks:</label> <input type="search" id="search-input" placeholder="Filter by description or context..."> </div>
+        <div id="task-dashboard"> ${stagesHTML} </div>
+        <div id="completion-message" style="display: none;">
+            <h2>SOP Complete!</h2>
+            <p>All SOP steps complete. Great work!</p>
+            <button class="reset-button" id="pdf-download-btn">
+                 <svg width="20" height="20"><use href="#icon-download" /></svg>
+                 Download PDF Report
+            </button>
+            <button class="reset-button clear-all-trigger">Start New Checklist</button>
+        </div>
+    </div>
+    <div class="lightbox-overlay" id="lightbox-overlay"> <div class="lightbox-content"> <img src="" alt="Lightbox Image" id="lightbox-image"> <button class="lightbox-close" id="lightbox-close" aria-label="Close image viewer">&times;</button> </div> </div>
+    
+    <div class="download-json-container">
+         <label class="theme-toggle">
+            <span class="theme-toggle-label">Dark Theme</span>
+            <input type="checkbox" id="theme-toggle-switch">
+            <span class="slider"></span>
+         </label>
+         <button id="download-json-btn-bottom" class="btn">
+             <svg width="20" height="20"><use href="#icon-download" /></svg>
+             Download Source JSON (Structure Only)
+         </button>
+    </div>
+
+    <div id="toast-container"></div>
+    
+    <script id="checklist-data" type="application/json"> ${JSON.stringify(data, null, 2)} <\/script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const progressBar = document.getElementById('progress-bar');
+            const progressLabel = document.getElementById('progress-label-text');
+            const completionMessage = document.getElementById('completion-message');
+            const taskDashboard = document.getElementById('task-dashboard');
+            const clearAllButtons = document.querySelectorAll('.clear-all-trigger');
+            const undoClearButton = document.getElementById('undo-clear-button');
+            const searchInput = document.getElementById('search-input');
+            const downloadJsonBtnBottom = document.getElementById('download-json-btn-bottom');
+            const lightboxOverlay = document.getElementById('lightbox-overlay');
+            const lightboxImage = document.getElementById('lightbox-image');
+            const lightboxClose = document.getElementById('lightbox-close');
+            const arcadeToggle = document.getElementById('arcade-toggle-switch');
+            const toastContainer = document.getElementById('toast-container');
+            const themeToggle = document.getElementById('theme-toggle-switch');
+            const pdfDownloadBtn = document.getElementById('pdf-download-btn');
+            const pdfReportDate = document.getElementById('pdf-report-date');
+
+            let allCheckboxes, infoToggleButtons, tickAllButtons, imageLinks, toggleContextButtons;
+            let embeddedData = {};
+            let totalTasks = 0;
+            let meta;
+            
+            // --- FIX: Define keys inside initializeChecklist AFTER data is parsed ---
+            let STATE_KEY = 'nhsChecklistState_Unknown';
+            let UNDO_KEY = 'nhsChecklistUndoState_Unknown';
+            const THEME_KEY = 'nhsChecklistTheme';
+            // --- END FIX ---
+
+            function initializeChecklist() {
+                try {
+                    embeddedData = JSON.parse(document.getElementById('checklist-data').textContent);
+                    meta = embeddedData.metadata || {};
+                } catch (e) { console.error("Could not parse embedded checklist data", e); meta = {}; }
+                
+                // --- FIX: Define keys HERE ---
+                const teamKey = (meta.team || 'UnknownTeam').replace(/[^a-zA-Z0-9_-]/g, '_');
+                const titleKey = (meta.title || 'UnknownTitle').replace(/[^a-zA-Z0-9_-]/g, '_');
+                // These are now correct string literals
+                STATE_KEY = 'nhsChecklistState_' + teamKey + '-' + titleKey;
+                UNDO_KEY = 'nhsChecklistUndoState_' + teamKey + '-' + titleKey;
+                // --- END FIX ---
+                
+                queryDynamicElements();
+                totalTasks = allCheckboxes.length;
+                populateIntro();
+                loadState();
+                updateProgress();
+                applySavedTheme();
+                attachGlobalListeners();
+            }
+            
+            function queryDynamicElements(){
+                 allCheckboxes = document.querySelectorAll('.task-checkbox');
+                 infoToggleButtons = document.querySelectorAll('.info-toggle-button');
+                 tickAllButtons = document.querySelectorAll('.btn-tick-all');
+                 imageLinks = document.querySelectorAll('.image-link');
+                 toggleContextButtons = document.querySelectorAll('.btn-toggle-context');
+            }
+
+            function escapeHTML(str) { if (!str) return ''; return str.toString().replace(/[&<>"']/g, match => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[match])); }
+
+            function populateIntro() {
+                const introSection = document.querySelector('.introduction-section');
+                if (!introSection || !meta) return;
+                const descEl = document.getElementById('meta-description') || introSection.querySelector('p');
+                if (descEl) descEl.textContent = meta.description || 'No description provided.';
+                const refEl = document.getElementById('meta-ref'); if(refEl) refEl.textContent = meta.title ? meta.title.split(' ')[0] : 'N/A';
+                const teamEl = document.getElementById('meta-team'); if(teamEl) teamEl.textContent = meta.team || 'N/A';
+                const workEl = document.getElementById('meta-workstream'); if(workEl) workEl.textContent = meta.workstream || 'N/A';
+                const revEl = document.getElementById('meta-review'); if(revEl) revEl.textContent = meta.reviewDate || 'N/A';
+                const verEl = document.getElementById('meta-version'); if(verEl) verEl.textContent = meta.version || 'N/A';
+            }
+
+
+             function attachGlobalListeners() {
+                allCheckboxes.forEach(checkbox => checkbox.addEventListener('change', (e) => handleCheckboxChange(e.currentTarget, true)));
+                infoToggleButtons.forEach(button => button.addEventListener('click', () => handleInfoToggle(button)));
+                tickAllButtons.forEach(button => { button.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); handleTickAll(e.currentTarget); }); });
+                imageLinks.forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); openLightbox(e.currentTarget.dataset.imgSrc); }); });
+                toggleContextButtons.forEach(button => { button.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); handleToggleStageContext(e.currentTarget); }); });
+                document.querySelectorAll('label[for]').forEach(label => { label.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); document.getElementById(label.getAttribute('for')).click(); } }); });
+                clearAllButtons.forEach(button => button.addEventListener('click', handleClearAll));
+                undoClearButton.addEventListener('click', handleUndoClear);
+                searchInput.addEventListener('input', handleSearch);
+                downloadJsonBtnBottom.addEventListener('click', handleDownloadJson);
+                lightboxClose.addEventListener('click', closeLightbox);
+                lightboxOverlay.addEventListener('click', (e) => { if (e.target === lightboxOverlay) { closeLightbox(); } });
+                document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && lightboxOverlay.classList.contains('visible')) { closeLightbox(); } });
+                
+                arcadeToggle.addEventListener('change', (e) => {
+                    document.body.classList.toggle('arcade-mode-active', e.target.checked);
+                    updateProgress(); 
+                });
+                
+                themeToggle.addEventListener('change', handleThemeToggle);
+                pdfDownloadBtn.addEventListener('click', handlePdfDownload);
+                
+                toastContainer.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('toast-undo-btn')) {
+                        const taskId = e.target.dataset.taskId;
+                        const checkbox = document.getElementById(taskId);
+                        if (checkbox) { checkbox.checked = false; handleCheckboxChange(checkbox, false); }
+                        e.target.closest('.toast').remove();
+                    }
+                });
+            }
+
+            // --- Theme Functions ---
+            function applySavedTheme() {
+                const savedTheme = localStorage.getItem(THEME_KEY);
+                if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.body.classList.add('dark-theme');
+                    themeToggle.checked = true;
+                } else {
+                    document.body.classList.remove('dark-theme');
+                    themeToggle.checked = false;
+                }
+            }
+
+            function handleThemeToggle(e) {
+                if (e.target.checked) {
+                    document.body.classList.add('dark-theme');
+                    localStorage.setItem(THEME_KEY, 'dark');
+                } else {
+                    document.body.classList.remove('dark-theme');
+                    localStorage.setItem(THEME_KEY, 'light');
+                }
+            }
+
+            // --- Toast Function ---
+            function showToast(taskId, description) {
+                const shortDesc = description.length > 40 ? description.substring(0, 40) + '...' : description;
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.innerHTML = \`<span class="toast-message">Completed: <strong>\${escapeHTML(shortDesc)}</strong></span> <button class="toast-undo-btn" data-task-id="\${taskId}">Undo</button>\`;
+                toastContainer.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.add('fade-out');
+                    setTimeout(() => { toast.remove(); }, 500);
+                }, 5000);
+            }
+
+            function downloadBlob(blob, filename) { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
+            
+            function handleDownloadJson() {
+                const jsonString = document.getElementById('checklist-data').textContent;
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                // Use the globally scoped keys
+                const date = new Date().toISOString().split('T')[0];
+                const version = (meta.version || '1.0').replace(/[^a-z0-9.]/gi, '_');
+                const base = \`\${teamKey}-\${titleKey}-\${date}.\${version}\`;
+                downloadBlob(blob, \`\${base}.json\`);
+            }
+            
+            // --- PDF Download Function ---
+            function handlePdfDownload() {
+                const now = new Date();
+                const completedDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                const completedTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                const dateTimeString = \`\${completedDate} at \${completedTime}\`;
+
+                // 1. Set data attribute on body for print CSS
+                pdfReportDate.textContent = 'Completed: ' + dateTimeString;
+                document.body.classList.add('printing-report');
+
+                // 2. Set document title for PDF filename suggestion
+                const originalTitle = document.title;
+                const date = new Date().toISOString().split('T')[0];
+                const version = (meta.version || '1.0').replace(/[^a-z0-9.]/gi, '_');
+                const base = \`\${teamKey}-\${titleKey}-\${date}.\${version}\`;
+                document.title = \`\${base}.completed\`;
+                
+                // 3. Call Print
+                window.print();
+                
+                // 4. Clean up after print dialog
+                function cleanupAfterPrint() {
+                    document.body.classList.remove('printing-report');
+                    document.title = originalTitle;
+                    window.onafterprint = null; 
+                }
+                
+                window.onafterprint = cleanupAfterPrint;
+
+                // Fallback for browsers that don't support onafterprint well
+                setTimeout(() => {
+                    if (document.body.classList.contains('printing-report')) {
+                         cleanupAfterPrint();
+                    }
+                }, 2000); 
+            }
+            
+            function openLightbox(imgSrc) { lightboxImage.src = imgSrc; lightboxOverlay.classList.add('visible'); lightboxClose.focus(); }
+            function closeLightbox() { lightboxOverlay.classList.remove('visible'); lightboxImage.src = ''; }
+            function saveState() { const checkedIds = []; allCheckboxes.forEach(box => { if (box.checked) checkedIds.push(box.id); }); localStorage.setItem(STATE_KEY, JSON.stringify(checkedIds)); }
+            function loadState(key = STATE_KEY) { const savedState = localStorage.getItem(key); if (!savedState) return; try { const checkedIds = JSON.parse(savedState); allCheckboxes.forEach(box => box.checked = false); checkedIds.forEach(id => { const box = document.getElementById(id); if (box) box.checked = true; }); } catch (e) { console.error("Error loading state:", e); localStorage.removeItem(key); } }
+            function updateProgress() { let checkedTasks = 0; const stageSpans = document.querySelectorAll('.stage-progress'); stageSpans.forEach(span => { const stageId = span.getAttribute('data-stage'); const stageTasks = document.querySelectorAll(\`.task-checkbox[data-stage="\${stageId}"]\`); const checkedStageTasks = document.querySelectorAll(\`.task-checkbox[data-stage="\${stageId}"]:checked\`); const total = stageTasks.length; const checked = checkedStageTasks.length; if (total > 0 && checked === total) { span.textContent = 'Stage Complete! ✔'; span.classList.add('complete'); } else { span.textContent = \`\${checked} / \${total} Tasks\`; span.classList.remove('complete'); } }); allCheckboxes.forEach(box => { if (box.checked) checkedTasks++; }); const percentage = totalTasks > 0 ? (checkedTasks / totalTasks) * 100 : 0; progressBar.style.width = percentage + '%'; progressLabel.textContent = Math.round(percentage) + '%'; if (totalTasks > 0 && percentage === 100) { taskDashboard.style.display = 'none'; completionMessage.style.display = 'block'; } else { taskDashboard.style.display = 'block'; completionMessage.style.display = 'none'; } }
+            
+            function handleCheckboxChange(checkbox, isManualClick = false) {
+                if (isManualClick && document.body.classList.contains('arcade-mode-active') && checkbox.checked) {
+                    const label = checkbox.closest('.task-item').querySelector('label');
+                    const description = label ? label.querySelector('.task-description-text').textContent : 'Task';
+                    showToast(checkbox.id, description);
+                }
+                saveState(); 
+                updateProgress();
+            }
+            
+            function handleClearAll() { const currentState = localStorage.getItem(STATE_KEY); if (currentState && currentState !== '[]') { localStorage.setItem(UNDO_KEY, currentState); undoClearButton.style.display = 'inline-block'; } allCheckboxes.forEach(checkbox => { checkbox.checked = false; }); document.querySelectorAll('.task-section, .introduction-section').forEach((section, index) => { section.open = (index === 0 || index === 1); }); document.querySelectorAll('.task-context').forEach(context => context.classList.remove('visible')); document.querySelectorAll('.info-toggle-button').forEach(button => button.classList.remove('active')); saveState(); updateProgress(); }
+            function handleUndoClear() { loadState(UNDO_KEY); saveState(); updateProgress(); localStorage.removeItem(UNDO_KEY); undoClearButton.style.display = 'none'; }
+            function handleInfoToggle(button) { const context = button.closest('.task-item-container').querySelector('.task-context'); if (context) { context.classList.toggle('visible'); button.classList.toggle('active'); } }
+            function handleTickAll(button) { const stageId = button.getAttribute('data-stage-id'); const stageCheckboxes = document.querySelectorAll(\`.task-checkbox[data-stage="\${stageId}"]\`); stageCheckboxes.forEach(box => { if (!box.checked) { box.checked = true; handleCheckboxChange(box, true); } }); }
+            function handleSearch() { const searchTerm = searchInput.value.toLowerCase().trim(); document.querySelectorAll('.task-section').forEach(stage => { let stageVisible = false; stage.querySelectorAll('.task-item-container').forEach(taskContainer => { const taskText = taskContainer.dataset.taskText || ''; const isMatch = searchTerm === '' || taskText.includes(searchTerm); taskContainer.classList.toggle('hidden', !isMatch); if(isMatch) stageVisible = true; }); stage.style.display = (stageVisible || searchTerm === '') ? '' : 'none'; }); }
+             function handleToggleStageContext(button) { const stageId = button.getAttribute('data-stage-id'); const stageContainer = document.querySelector(\`details[data-stage-container="\${stageId}"]\`); if (!stageContainer) return; const infoButtons = stageContainer.querySelectorAll('.info-toggle-button'); const contexts = stageContainer.querySelectorAll('.task-context'); let shouldExpand = Array.from(contexts).some(ctx => !ctx.classList.contains('visible')); contexts.forEach(context => context.classList.toggle('visible', shouldExpand)); infoButtons.forEach(btn => { const associatedContext = btn.closest('.task-item-container').querySelector('.task-context'); if (associatedContext) { btn.classList.toggle('active', shouldExpand); } }); button.setAttribute('title', shouldExpand ? 'Collapse all context notes' : 'Expand all context notes'); }
+
+            // --- Run Initialization ---
+            initializeChecklist();
+
+        });
+    <\/script>
+</body>
+</html>`;
+            }
+
+        });
+    </script>
+</body>
+</html>
